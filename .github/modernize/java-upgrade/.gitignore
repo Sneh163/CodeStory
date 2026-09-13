@@ -1,0 +1,41 @@
+# ==============================
+# macOS
+# ==============================
+.DS_Store
+
+# ==============================
+# Java / Spring Boot / Maven
+# ==============================
+backend/target/
+*.class
+*.log
+
+# ==============================
+# Node / React / Vite
+# ==============================
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ==============================
+# Environment / Secrets
+# ==============================
+.env
+.env.*
+!.env.example
+
+# ==============================
+# IDE
+# ==============================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+.idea/
+*.iml
+
+# ==============================
+# OS / Temporary files
+# ==============================
+*.tmp
+*.temp

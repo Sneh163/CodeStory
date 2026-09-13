@@ -1,0 +1,24 @@
+# macOS
+.DS_Store
+
+# Java / Spring Boot
+backend/target/
+*.class
+*.log
+
+# Node / React / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
