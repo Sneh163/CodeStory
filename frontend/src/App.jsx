@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./App.css";
 
 const API_URL = "http://localhost:8080/api/requirements";
+const EVENTS_API_URL = "http://localhost:8080/api/events";
 
 function App() {
 
@@ -148,6 +149,16 @@ function App() {
 
 
   // =========================================================
+  // EVOLUTION TIMELINE
+  // =========================================================
+
+  const [projectEvents, setProjectEvents] = useState([]);
+
+  const [eventsLoading, setEventsLoading] =
+    useState(false);
+
+
+  // =========================================================
   // LOAD REQUIREMENTS
   // =========================================================
 
@@ -173,6 +184,47 @@ function App() {
         "Error loading requirements:",
         error
       );
+
+    }
+  };
+
+
+  // =========================================================
+  // LOAD PROJECT EVENTS
+  // =========================================================
+
+  const loadProjectEvents = async () => {
+
+    setEventsLoading(true);
+
+    try {
+
+      const response = await fetch(
+        EVENTS_API_URL
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Failed to load project events"
+        );
+      }
+
+      const data = await response.json();
+
+      setProjectEvents(data);
+
+    } catch (error) {
+
+      console.error(
+        "Error loading project events:",
+        error
+      );
+
+      setProjectEvents([]);
+
+    } finally {
+
+      setEventsLoading(false);
 
     }
   };
@@ -283,6 +335,7 @@ function App() {
   useEffect(() => {
 
     loadRequirements();
+    loadProjectEvents();
 
   }, []);
 
@@ -1097,6 +1150,201 @@ function App() {
     return new Date(date).toLocaleString();
 
   };
+
+
+  // =========================================================
+  // EVOLUTION TIMELINE
+  // =========================================================
+
+  const getEventIcon = (eventType) => {
+
+    const type = (eventType || "").toUpperCase();
+
+    if (type.includes("CREATED")) {
+      return "+";
+    }
+
+    if (
+      type.includes("VERSION") ||
+      type.includes("UPDATED") ||
+      type.includes("MODIFIED")
+    ) {
+      return "↻";
+    }
+
+    if (
+      type.includes("DECISION") ||
+      type.includes("COMPLETED")
+    ) {
+      return "✓";
+    }
+
+    if (
+      type.includes("IMPACT") ||
+      type.includes("CHANGE")
+    ) {
+      return "!";
+    }
+
+    return "•";
+  };
+
+
+  const renderEvolutionTimeline = () => (
+
+    <>
+
+      <header className="topbar">
+
+        <div>
+
+          <h1>
+            Evolution Timeline
+          </h1>
+
+          <p>
+            Track how CodeStory has evolved over time
+          </p>
+
+        </div>
+
+      </header>
+
+
+      <section className="section">
+
+        <div className="section-header">
+
+          <div>
+
+            <h2>
+              Project Evolution
+            </h2>
+
+            <p>
+              Chronological history of requirements, versions,
+              decisions and project events
+            </p>
+
+          </div>
+
+          <button
+            className="secondary-button"
+            onClick={loadProjectEvents}
+            disabled={eventsLoading}
+          >
+            {eventsLoading ? "Refreshing..." : "Refresh"}
+          </button>
+
+        </div>
+
+
+        {eventsLoading && projectEvents.length === 0 ? (
+
+          <div className="empty-state">
+            Loading project events...
+          </div>
+
+        ) : projectEvents.length === 0 ? (
+
+          <div className="empty-state">
+            No project events found.
+          </div>
+
+        ) : (
+
+          <div className="requirement-list">
+
+            {projectEvents.map(
+              (event) => (
+
+                <div
+                  className="requirement-card"
+                  key={event.id}
+                  style={{
+                    alignItems: "center",
+                  }}
+                >
+
+                  <div
+                    className="activity-icon"
+                    style={{
+                      flexShrink: 0,
+                      marginRight: "22px",
+                    }}
+                  >
+                    {getEventIcon(event.eventType)}
+                  </div>
+
+
+                  <div
+                    style={{
+                      flex: 1,
+                    }}
+                  >
+
+                    <div
+                      className="requirement-id"
+                    >
+                      EVENT-
+                      {String(event.id).padStart(3, "0")}
+                    </div>
+
+
+                    <h3>
+                      {event.eventType}
+                    </h3>
+
+
+                    <p>
+                      {event.description ||
+                        "No event description available."}
+                    </p>
+
+
+                    <div
+                      style={{
+                        marginTop: "12px",
+                        color: "#64748b",
+                        fontSize: "14px",
+                      }}
+                    >
+
+                      <strong>
+                        Timestamp:
+                      </strong>{" "}
+
+                      {formatDate(event.timestamp)}
+
+                    </div>
+
+                  </div>
+
+
+                  <div
+                    className="requirement-right"
+                  >
+
+                    <span className="status">
+                      PROJECT EVENT
+                    </span>
+
+                  </div>
+
+                </div>
+
+              )
+            )}
+
+          </div>
+
+        )}
+
+      </section>
+
+    </>
+
+  );
 
 
   // =========================================================
@@ -1916,10 +2164,14 @@ function App() {
 
 
           <button
-            className="nav-item"
+            className={
+              activePage === "Evolution Timeline"
+                ? "nav-item active"
+                : "nav-item"
+            }
             onClick={() =>
-              alert(
-                "Evolution Timeline module is coming next."
+              setActivePage(
+                "Evolution Timeline"
               )
             }
           >
@@ -1960,6 +2212,9 @@ function App() {
 
         {activePage === "Impact Analysis" &&
           renderImpactAnalysis()}
+
+        {activePage === "Evolution Timeline" &&
+          renderEvolutionTimeline()}
 
       </main>
 

@@ -1,12 +1,14 @@
 package com.codestory.backend.service;
 
+import com.codestory.backend.model.ProjectEvent;
 import com.codestory.backend.model.Requirement;
 import com.codestory.backend.model.RequirementVersion;
+import com.codestory.backend.repository.ProjectEventRepository;
 import com.codestory.backend.repository.RequirementRepository;
 import com.codestory.backend.repository.RequirementVersionRepository;
+
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,18 +18,21 @@ public class RequirementVersionService {
 
     private final RequirementVersionRepository versionRepository;
     private final RequirementRepository requirementRepository;
+    private final ProjectEventRepository projectEventRepository;
 
     public RequirementVersionService(
             RequirementVersionRepository versionRepository,
-            RequirementRepository requirementRepository
+            RequirementRepository requirementRepository,
+            ProjectEventRepository projectEventRepository
     ) {
         this.versionRepository = versionRepository;
         this.requirementRepository = requirementRepository;
+        this.projectEventRepository = projectEventRepository;
     }
 
 
     // =========================
-    // CREATE REQUIREMENT VERSION
+    // CREATE VERSION
     // =========================
 
     public RequirementVersion createVersion(
@@ -37,25 +42,19 @@ public class RequirementVersionService {
             String status
     ) {
 
-        Requirement requirement =
-                requirementRepository
-                        .findById(requirementId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Requirement not found with id: "
-                                                + requirementId
-                                )
-                        );
-
+        Requirement requirement = requirementRepository
+                .findById(requirementId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Requirement not found with id: "
+                                        + requirementId
+                        )
+                );
 
         Integer currentVersion =
-                versionRepository
-                        .countByRequirementId(requirementId);
+                versionRepository.countByRequirementId(requirementId);
 
-
-        Integer nextVersion =
-                currentVersion + 1;
-
+        Integer nextVersion = currentVersion + 1;
 
         RequirementVersion version =
                 new RequirementVersion(
@@ -66,18 +65,24 @@ public class RequirementVersionService {
                         status
                 );
 
-
         RequirementVersion savedVersion =
                 versionRepository.save(version);
 
 
-        // Update parent requirement timestamp
-        requirement.setUpdatedAt(
-                LocalDateTime.now()
+        // =========================
+        // EVOLUTION TIMELINE EVENT
+        // =========================
+
+        ProjectEvent event = new ProjectEvent(
+                "VERSION_CREATED",
+                "Version V"
+                        + nextVersion
+                        + " created for "
+                        + requirement.getTitle()
+                        + " requirement."
         );
 
-        requirementRepository.save(requirement);
-
+        projectEventRepository.save(event);
 
         return savedVersion;
     }
@@ -127,29 +132,16 @@ public class RequirementVersionService {
     ) {
 
         RequirementVersion version1 =
-                versionRepository
-                        .findById(versionId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Requirement version not found with id: "
-                                                + versionId
-                                )
-                        );
-
+                getVersionById(versionId);
 
         RequirementVersion version2 =
-                versionRepository
-                        .findById(otherVersionId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Requirement version not found with id: "
-                                                + otherVersionId
-                                )
-                        );
+                getVersionById(otherVersionId);
 
 
-        // Make sure both versions belong
-        // to the same requirement
+        // =========================
+        // CHECK SAME REQUIREMENT
+        // =========================
+
         if (!version1.getRequirement()
                 .getId()
                 .equals(
@@ -157,14 +149,41 @@ public class RequirementVersionService {
                 )) {
 
             throw new RuntimeException(
-                    "Versions must belong to the same requirement"
+                    "Cannot compare versions belonging to different requirements."
             );
-
         }
 
 
         // =========================
-        // VERSION INFORMATION
+        // CHANGE DETECTION
+        // =========================
+
+        boolean titleChanged =
+                !safeEquals(
+                        version1.getTitle(),
+                        version2.getTitle()
+                );
+
+        boolean descriptionChanged =
+                !safeEquals(
+                        version1.getDescription(),
+                        version2.getDescription()
+                );
+
+        boolean statusChanged =
+                !safeEquals(
+                        version1.getStatus(),
+                        version2.getStatus()
+                );
+
+        boolean hasChanges =
+                titleChanged
+                        || descriptionChanged
+                        || statusChanged;
+
+
+        // =========================
+        // RESULT
         // =========================
 
         Map<String, Object> result =
@@ -176,7 +195,6 @@ public class RequirementVersionService {
                 version1.getRequirement().getId()
         );
 
-
         result.put(
                 "requirementTitle",
                 version1.getRequirement().getTitle()
@@ -185,48 +203,36 @@ public class RequirementVersionService {
 
         result.put(
                 "version1",
-                createVersionInfo(version1)
+                createVersionData(version1)
         );
-
 
         result.put(
                 "version2",
-                createVersionInfo(version2)
+                createVersionData(version2)
         );
 
-
-        // =========================
-        // CHANGES
-        // =========================
 
         Map<String, Boolean> changes =
                 new LinkedHashMap<>();
 
-
         changes.put(
                 "titleChanged",
-                !safeEquals(
-                        version1.getTitle(),
-                        version2.getTitle()
-                )
+                titleChanged
         );
-
 
         changes.put(
                 "descriptionChanged",
-                !safeEquals(
-                        version1.getDescription(),
-                        version2.getDescription()
-                )
+                descriptionChanged
         );
-
 
         changes.put(
                 "statusChanged",
-                !safeEquals(
-                        version1.getStatus(),
-                        version2.getStatus()
-                )
+                statusChanged
+        );
+
+        changes.put(
+                "hasChanges",
+                hasChanges
         );
 
 
@@ -236,72 +242,52 @@ public class RequirementVersionService {
         );
 
 
-        // Overall result
-        boolean anyChange =
-                changes.values()
-                        .stream()
-                        .anyMatch(Boolean::booleanValue);
-
-
-        result.put(
-                "hasChanges",
-                anyChange
-        );
-
-
         return result;
     }
 
 
     // =========================
-    // VERSION INFO
+    // VERSION DATA
     // =========================
 
-    private Map<String, Object> createVersionInfo(
+    private Map<String, Object> createVersionData(
             RequirementVersion version
     ) {
 
-        Map<String, Object> info =
+        Map<String, Object> data =
                 new LinkedHashMap<>();
 
-
-        info.put(
+        data.put(
                 "id",
                 version.getId()
         );
 
-
-        info.put(
+        data.put(
                 "versionNumber",
                 version.getVersionNumber()
         );
 
-
-        info.put(
+        data.put(
                 "title",
                 version.getTitle()
         );
 
-
-        info.put(
+        data.put(
                 "description",
                 version.getDescription()
         );
 
-
-        info.put(
+        data.put(
                 "status",
                 version.getStatus()
         );
 
-
-        info.put(
+        data.put(
                 "createdAt",
                 version.getCreatedAt()
         );
 
-
-        return info;
+        return data;
     }
 
 
@@ -318,11 +304,9 @@ public class RequirementVersionService {
             return true;
         }
 
-
         if (first == null || second == null) {
             return false;
         }
-
 
         return first.equals(second);
     }

@@ -1,7 +1,9 @@
 package com.codestory.backend.service;
 
 import com.codestory.backend.model.Requirement;
+import com.codestory.backend.model.ProjectEvent;
 import com.codestory.backend.repository.RequirementRepository;
+import com.codestory.backend.repository.ProjectEventRepository;
 
 import org.springframework.stereotype.Service;
 
@@ -11,23 +13,53 @@ import java.util.List;
 public class RequirementService {
 
     private final RequirementRepository requirementRepository;
+    private final ProjectEventRepository projectEventRepository;
 
     public RequirementService(
-            RequirementRepository requirementRepository) {
+            RequirementRepository requirementRepository,
+            ProjectEventRepository projectEventRepository) {
 
         this.requirementRepository = requirementRepository;
+        this.projectEventRepository = projectEventRepository;
     }
+
+    // ==============================
+    // CREATE REQUIREMENT
+    // ==============================
 
     public Requirement createRequirement(
             Requirement requirement) {
 
-        return requirementRepository.save(requirement);
+        Requirement savedRequirement =
+                requirementRepository.save(requirement);
+
+        // Create timeline event automatically
+        ProjectEvent event = new ProjectEvent();
+
+        event.setEventType("REQUIREMENT_CREATED");
+
+        event.setDescription(
+                savedRequirement.getTitle()
+                        + " requirement created."
+        );
+
+        projectEventRepository.save(event);
+
+        return savedRequirement;
     }
+
+    // ==============================
+    // GET ALL REQUIREMENTS
+    // ==============================
 
     public List<Requirement> getAllRequirements() {
 
         return requirementRepository.findAll();
     }
+
+    // ==============================
+    // GET REQUIREMENT BY ID
+    // ==============================
 
     public Requirement getRequirementById(Long id) {
 
@@ -37,6 +69,10 @@ public class RequirementService {
                                 "Requirement not found with id: " + id
                         ));
     }
+
+    // ==============================
+    // UPDATE REQUIREMENT
+    // ==============================
 
     public Requirement updateRequirement(
             Long id,
@@ -62,9 +98,14 @@ public class RequirementService {
         );
     }
 
+    // ==============================
+    // DELETE REQUIREMENT
+    // ==============================
+
     public void deleteRequirement(Long id) {
 
         if (!requirementRepository.existsById(id)) {
+
             throw new RuntimeException(
                     "Requirement not found with id: " + id
             );
