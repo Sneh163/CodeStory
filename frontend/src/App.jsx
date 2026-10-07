@@ -12,6 +12,29 @@ function App() {
 
   const [activePage, setActivePage] = useState("Dashboard");
 
+  // =========================================================
+  // AUTHENTICATION / LOGIN
+  // =========================================================
+
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authTab, setAuthTab] = useState("signin");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loginUserId, setLoginUserId] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
+
+
+
+
 
   // =========================================================
   // REQUIREMENTS
@@ -156,6 +179,256 @@ function App() {
 
   const [eventsLoading, setEventsLoading] =
     useState(false);
+
+
+  // =========================================================
+  // ARTEFACTS
+  // =========================================================
+
+  const [artefacts, setArtefacts] = useState(() => {
+    try {
+      const stored = localStorage.getItem("codestory_artefacts");
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error("Error loading artefacts:", error);
+      return [];
+    }
+  });
+
+  const [selectedArtefact, setSelectedArtefact] =
+    useState(null);
+
+  const [showArtefactForm, setShowArtefactForm] =
+    useState(false);
+
+  const [artefactName, setArtefactName] = useState("");
+  const [artefactType, setArtefactType] =
+    useState("DOCUMENT");
+  const [artefactDescription, setArtefactDescription] =
+    useState("");
+  const [artefactFilePath, setArtefactFilePath] =
+    useState("");
+  const [artefactFileSize, setArtefactFileSize] =
+    useState("");
+  const [artefactUploadedBy, setArtefactUploadedBy] =
+    useState("Sneh Bhimani");
+  const [artefactRequirementId, setArtefactRequirementId] =
+    useState("");
+  const [artefactStatus, setArtefactStatus] =
+    useState("ACTIVE");
+  const [artefactLoading, setArtefactLoading] =
+    useState(false);
+
+
+  // =========================================================
+  // LOGIN / SIGNUP HANDLERS
+  // =========================================================
+
+  const handleLoginSubmit = (event) => {
+    event.preventDefault();
+    if (!loginUserId.trim() || !loginPassword.trim()) {
+      setAuthMessage("Please enter your User ID and password.");
+      return;
+    }
+    setAuthMessage("");
+    setAuthLoading(true);
+    setTimeout(() => {
+      setAuthLoading(false);
+      setIsAuthenticated(true);
+      setActivePage("Dashboard");
+    }, 900);
+  };
+
+  const handleSignupSubmit = (event) => {
+    event.preventDefault();
+    if (signupPassword !== confirmPassword) {
+      setAuthMessage("Passwords do not match. Please verify your password entry.");
+      return;
+    }
+    if (!agreeTerms) {
+      setAuthMessage("Please accept the Enterprise Master Service Agreement and Privacy Policy.");
+      return;
+    }
+    setAuthMessage("");
+    setAuthLoading(true);
+    setTimeout(() => {
+      setAuthLoading(false);
+      setAuthTab("signin");
+      setLoginUserId(signupEmail);
+      setLoginPassword("");
+      setAuthMessage("Account created successfully. Please sign in.");
+    }, 1000);
+  };
+
+  const passwordStrength = (() => {
+    let score = 0;
+    if (signupPassword.length >= 8) score++;
+    if (/[A-Z]/.test(signupPassword) && /[a-z]/.test(signupPassword)) score++;
+    if (/[0-9]/.test(signupPassword)) score++;
+    if (/[^A-Za-z0-9]/.test(signupPassword)) score++;
+    if (!signupPassword) return { score: 0, label: "Min 8 chars" };
+    if (score === 1) return { score, label: "Weak" };
+    if (score === 2) return { score, label: "Fair" };
+    if (score === 3) return { score, label: "Good" };
+    return { score, label: "Strong" };
+  })();
+
+  const renderLoginPage = () => (
+    <div className="codestory-auth-page">
+      <header className="auth-header">
+        <div className="auth-brand">
+          <div className="auth-brand-icon">C</div>
+          <div className="auth-brand-name">CodeStory</div>
+          <span className="auth-version">v2.4 LTS</span>
+        </div>
+      </header>
+
+      <main className="auth-main">
+        <div className="auth-background-grid" />
+        <div className="auth-glow auth-glow-one" />
+        <div className="auth-glow auth-glow-two" />
+
+        <section className="auth-card">
+          <div className="auth-card-header">
+            <div className="auth-card-brand">
+              <div className="auth-card-logo">C</div>
+              <div>
+                <div className="auth-card-name">CodeStory</div>
+                <div className="auth-card-subtitle">Enterprise v2.4</div>
+              </div>
+            </div>
+            <div className="auth-operational"><span />OPERATIONAL</div>
+          </div>
+
+          <div className="auth-tabs">
+            <button type="button" className={authTab === "signin" ? "auth-tab active" : "auth-tab"} onClick={() => { setAuthTab("signin"); setAuthMessage(""); }}>
+              <span className="material-symbols-outlined">login</span>SIGN IN
+            </button>
+            <button type="button" className={authTab === "signup" ? "auth-tab active" : "auth-tab"} onClick={() => { setAuthTab("signup"); setAuthMessage(""); }}>
+              <span className="material-symbols-outlined">person_add</span>CREATE ACCOUNT
+            </button>
+          </div>
+
+          {authTab === "signin" ? (
+            <form className="auth-form" onSubmit={handleLoginSubmit}>
+              <div className="auth-heading">
+                <h1>Welcome Back</h1>
+                <p>Sign in to continue to CodeStory Workspace</p>
+              </div>
+
+              <div className="auth-field">
+                <label htmlFor="login-user-id">USER ID OR WORK EMAIL</label>
+                <div className="auth-input-wrap">
+                  <span className="material-symbols-outlined">badge</span>
+                  <input id="login-user-id" type="text" value={loginUserId} onChange={(e) => setLoginUserId(e.target.value)} placeholder="name@company.com or eng_uid" required />
+                </div>
+              </div>
+
+              <div className="auth-field">
+                <div className="auth-label-row">
+                  <label htmlFor="login-password">PASSWORD</label>
+                  <button type="button" className="auth-link-button">Forgot Password?</button>
+                </div>
+                <div className="auth-input-wrap">
+                  <span className="material-symbols-outlined">lock</span>
+                  <input id="login-password" type={showLoginPassword ? "text" : "password"} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} placeholder="Enter your enterprise password" required />
+                  <button type="button" className="auth-eye" onClick={() => setShowLoginPassword((value) => !value)} aria-label="Toggle password visibility">
+                    <span className="material-symbols-outlined">{showLoginPassword ? "visibility_off" : "visibility"}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="auth-remember-row">
+                <label><input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} /><span>Remember this workstation</span></label>
+                <span>30-DAY SESSION</span>
+              </div>
+
+              {authMessage && <div className="auth-message">{authMessage}</div>}
+
+              <button className="auth-primary-button" type="submit" disabled={authLoading}>
+                {authLoading ? <><span className="material-symbols-outlined auth-spin">progress_activity</span>Authenticating Session...</> : <>Sign In to Platform<span className="material-symbols-outlined">arrow_forward</span></>}
+              </button>
+
+              <div className="auth-divider"><span>OR CONTINUE WITH ENTERPRISE SSO</span></div>
+              <div className="auth-sso-grid">
+                <button type="button" className="auth-sso-button"><span className="auth-github-icon">●</span>GitHub SSO</button>
+                <button type="button" className="auth-sso-button"><span className="material-symbols-outlined">key</span>SAML 2.0</button>
+              </div>
+
+              <div className="auth-switch-text">
+                Don't have an enterprise seat?
+                <button type="button" onClick={() => { setAuthTab("signup"); setAuthMessage(""); }}>Create Account / Request Access</button>
+              </div>
+            </form>
+          ) : (
+            <form className="auth-form signup-form" onSubmit={handleSignupSubmit}>
+              <div className="auth-heading">
+                <h1>Create Enterprise Account</h1>
+                <p>Deploy automated code intelligence across your organization</p>
+              </div>
+
+              <div className="auth-field">
+                <label htmlFor="signup-name">FULL NAME</label>
+                <div className="auth-input-wrap"><span className="material-symbols-outlined">person</span><input id="signup-name" type="text" value={signupName} onChange={(e) => setSignupName(e.target.value)} placeholder="Dr. Alex Rivera" required /></div>
+              </div>
+
+              <div className="auth-field">
+                <label htmlFor="signup-email">WORK EMAIL</label>
+                <div className="auth-input-wrap"><span className="material-symbols-outlined">mail</span><input id="signup-email" type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} placeholder="alex@acme.corp" required /></div>
+              </div>
+
+              <div className="auth-field">
+                <div className="auth-label-row"><label htmlFor="signup-password">PASSWORD</label><span className={passwordStrength.score >= 3 ? "auth-strength good" : "auth-strength"}>{passwordStrength.label}</span></div>
+                <div className="auth-input-wrap">
+                  <span className="material-symbols-outlined">lock</span>
+                  <input id="signup-password" type={showSignupPassword ? "text" : "password"} value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} placeholder="Create strong password" required />
+                  <button type="button" className="auth-eye" onClick={() => setShowSignupPassword((value) => !value)} aria-label="Toggle password visibility"><span className="material-symbols-outlined">{showSignupPassword ? "visibility_off" : "visibility"}</span></button>
+                </div>
+                <div className="auth-strength-bars">{[0,1,2,3].map((index) => <span key={index} className={passwordStrength.score > index ? "filled" : ""} />)}</div>
+              </div>
+
+              <div className="auth-field">
+                <label htmlFor="confirm-password">CONFIRM PASSWORD</label>
+                <div className="auth-input-wrap">
+                  <span className="material-symbols-outlined">verified_user</span>
+                  <input id="confirm-password" type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat password" required />
+                  <button type="button" className="auth-eye" onClick={() => setShowConfirmPassword((value) => !value)} aria-label="Toggle password visibility"><span className="material-symbols-outlined">{showConfirmPassword ? "visibility_off" : "visibility"}</span></button>
+                </div>
+              </div>
+
+              <label className="auth-terms"><input type="checkbox" checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} required /><span>I agree to the <a href="#terms" onClick={(e) => e.preventDefault()}>Enterprise Master Service Agreement</a> and <a href="#privacy" onClick={(e) => e.preventDefault()}>Privacy Policy</a>.</span></label>
+
+              {authMessage && <div className="auth-message">{authMessage}</div>}
+
+              <button className="auth-primary-button" type="submit" disabled={authLoading}>
+                {authLoading ? <><span className="material-symbols-outlined auth-spin">progress_activity</span>Provisioning Tenant...</> : <>Create Enterprise Account<span className="material-symbols-outlined">arrow_forward</span></>}
+              </button>
+
+              <div className="auth-divider"><span>OR SIGN UP WITH ENTERPRISE IDENTITY</span></div>
+              <div className="auth-sso-grid">
+                <button type="button" className="auth-sso-button"><span className="auth-github-icon">●</span>GitHub SSO</button>
+                <button type="button" className="auth-sso-button"><span className="material-symbols-outlined">key</span>SAML 2.0</button>
+              </div>
+
+              <div className="auth-switch-text">Already have an enterprise account?<button type="button" onClick={() => { setAuthTab("signin"); setAuthMessage(""); }}>Sign In</button></div>
+            </form>
+          )}
+
+          <div className="auth-audit-bar"><span className="material-symbols-outlined">security</span>PROTECTED WITH END-TO-END AUDIT &amp; INTELLIGENCE LOGGING</div>
+        </section>
+      </main>
+
+      <div className="auth-status-bar">
+        <div><span className="material-symbols-outlined">verified_user</span>Strict Zero-Trust policy enabled. Multi-region redundancy active across US-East, US-West, and EU-Central.</div>
+        <div><span>Latency: 24ms</span><strong>All Nodes Healthy</strong></div>
+      </div>
+
+      <footer className="auth-footer">
+        <div>© 2025 CodeStory Intelligence Inc. All rights reserved. <span>•</span> <strong>v4.18.2-prod</strong></div>
+        <div className="auth-footer-links"><a href="#security" onClick={(e) => e.preventDefault()}>Security Policy</a><a href="#privacy" onClick={(e) => e.preventDefault()}>Privacy Statement</a><a href="#terms" onClick={(e) => e.preventDefault()}>Terms of Service</a><a href="#trust" onClick={(e) => e.preventDefault()}>Trust Center</a></div>
+      </footer>
+    </div>
+  );
 
 
   // =========================================================
@@ -1138,6 +1411,107 @@ function App() {
 
 
   // =========================================================
+  // ARTEFACT MANAGEMENT
+  // =========================================================
+
+  const saveArtefacts = (items) => {
+    setArtefacts(items);
+    localStorage.setItem(
+      "codestory_artefacts",
+      JSON.stringify(items)
+    );
+  };
+
+
+  const openArtefactForm = () => {
+    setArtefactName("");
+    setArtefactType("DOCUMENT");
+    setArtefactDescription("");
+    setArtefactFilePath("");
+    setArtefactFileSize("");
+    setArtefactUploadedBy("Sneh Bhimani");
+    setArtefactRequirementId(
+      requirements.length > 0
+        ? String(requirements[0].id)
+        : ""
+    );
+    setArtefactStatus("ACTIVE");
+    setShowArtefactForm(true);
+  };
+
+
+  const createArtefact = (event) => {
+    event.preventDefault();
+
+    if (!artefactName.trim()) {
+      alert("Please enter an artefact name.");
+      return;
+    }
+
+    setArtefactLoading(true);
+
+    try {
+      const nextId =
+        artefacts.length > 0
+          ? Math.max(...artefacts.map((item) => item.id)) + 1
+          : 1;
+
+      const relatedRequirement = requirements.find(
+        (requirement) =>
+          String(requirement.id) === String(artefactRequirementId)
+      );
+
+      const newArtefact = {
+        id: nextId,
+        projectId: 1,
+        uploadedBy: artefactUploadedBy.trim() || "Unknown",
+        artefactName: artefactName.trim(),
+        artefactType,
+        description: artefactDescription.trim(),
+        filePath: artefactFilePath.trim(),
+        fileSize: artefactFileSize.trim(),
+        createdAt: new Date().toISOString(),
+        status: artefactStatus,
+        requirementId: relatedRequirement?.id || null,
+        requirementTitle: relatedRequirement?.title || null
+      };
+
+      saveArtefacts([newArtefact, ...artefacts]);
+      setShowArtefactForm(false);
+    } catch (error) {
+      console.error("Error creating artefact:", error);
+      alert("Could not create artefact.");
+    } finally {
+      setArtefactLoading(false);
+    }
+  };
+
+
+  const viewArtefact = (artefact) => {
+    setSelectedArtefact(artefact);
+  };
+
+
+  const closeArtefact = () => {
+    setSelectedArtefact(null);
+  };
+
+
+  const handleArtefactFile = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setArtefactFilePath(file.name);
+    setArtefactFileSize(
+      `${(file.size / 1024).toFixed(1)} KB`
+    );
+  };
+
+
+  // =========================================================
   // FORMAT DATE
   // =========================================================
 
@@ -1348,6 +1722,124 @@ function App() {
 
 
   // =========================================================
+  // ARTEFACTS PAGE
+  // =========================================================
+
+  const renderArtefacts = () => (
+
+    <>
+
+      <header className="topbar">
+
+        <div>
+
+          <h1>
+            Artefacts
+          </h1>
+
+          <p>
+            Manage project documents, files and engineering artefacts
+          </p>
+
+        </div>
+
+      </header>
+
+
+      <section className="section">
+
+        <div className="section-header">
+
+          <div>
+
+            <h2>
+              Project Artefacts
+            </h2>
+
+            <p>
+              Store and track artefact metadata and project references
+            </p>
+
+          </div>
+
+
+          <button
+            className="primary-button"
+            onClick={openArtefactForm}
+          >
+            + Upload Artefact
+          </button>
+
+        </div>
+
+
+        {artefacts.length === 0 ? (
+
+          <div className="empty-state">
+            No artefacts found. Upload your first project artefact.
+          </div>
+
+        ) : (
+
+          <div className="requirement-list">
+
+            {artefacts.map((artefact) => (
+
+              <div
+                className="requirement-card"
+                key={artefact.id}
+              >
+
+                <div>
+
+                  <div className="requirement-id">
+                    ART-
+                    {String(artefact.id).padStart(3, "0")}
+                  </div>
+
+                  <h3>
+                    {artefact.artefactName}
+                  </h3>
+
+                  <p>
+                    {artefact.description ||
+                      "No artefact description provided."}
+                  </p>
+
+                </div>
+
+
+                <div className="requirement-right">
+
+                  <span className="status">
+                    {artefact.status}
+                  </span>
+
+                  <button
+                    className="view-button"
+                    onClick={() => viewArtefact(artefact)}
+                  >
+                    View
+                  </button>
+
+                </div>
+
+              </div>
+
+            ))}
+
+          </div>
+
+        )}
+
+      </section>
+
+    </>
+
+  );
+
+
+  // =========================================================
   // DASHBOARD
   // =========================================================
 
@@ -1444,7 +1936,7 @@ function App() {
           </span>
 
           <strong>
-            0
+            {artefacts.length}
           </strong>
 
           <small>
@@ -2077,6 +2569,10 @@ function App() {
   // MAIN UI
   // =========================================================
 
+  if (!isAuthenticated) {
+    return renderLoginPage();
+  }
+
   return (
 
     <div className="app">
@@ -2180,11 +2676,13 @@ function App() {
 
 
           <button
-            className="nav-item"
+            className={
+              activePage === "Artefacts"
+                ? "nav-item active"
+                : "nav-item"
+            }
             onClick={() =>
-              alert(
-                "Artefacts module is coming next."
-              )
+              setActivePage("Artefacts")
             }
           >
             Artefacts
@@ -2215,6 +2713,9 @@ function App() {
 
         {activePage === "Evolution Timeline" &&
           renderEvolutionTimeline()}
+
+        {activePage === "Artefacts" &&
+          renderArtefacts()}
 
       </main>
 
@@ -3582,6 +4083,344 @@ function App() {
                 Close
               </button>
 
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+
+      {/* =====================================================
+          CREATE ARTEFACT MODAL
+          ===================================================== */}
+
+      {showArtefactForm && (
+
+        <div className="modal-overlay">
+
+          <div className="modal">
+
+            <div className="modal-header">
+
+              <div>
+
+                <h2>
+                  Upload Artefact
+                </h2>
+
+                <p>
+                  Add a project document, file or engineering artefact
+                </p>
+
+              </div>
+
+
+              <button
+                className="close-button"
+                onClick={() => setShowArtefactForm(false)}
+              >
+                ×
+              </button>
+
+            </div>
+
+
+            <form
+              className="requirement-form"
+              onSubmit={createArtefact}
+            >
+
+              <label>
+                Artefact Name
+              </label>
+
+              <input
+                type="text"
+                placeholder="Example: API Specification"
+                value={artefactName}
+                onChange={(event) =>
+                  setArtefactName(event.target.value)
+                }
+                required
+              />
+
+
+              <label>
+                Artefact Type
+              </label>
+
+              <select
+                value={artefactType}
+                onChange={(event) =>
+                  setArtefactType(event.target.value)
+                }
+              >
+                <option value="DOCUMENT">DOCUMENT</option>
+                <option value="SOURCE_CODE">SOURCE CODE</option>
+                <option value="API_SPECIFICATION">API SPECIFICATION</option>
+                <option value="DESIGN">DESIGN</option>
+                <option value="REPORT">REPORT</option>
+                <option value="OTHER">OTHER</option>
+              </select>
+
+
+              <label>
+                Description
+              </label>
+
+              <textarea
+                rows="4"
+                placeholder="Describe this artefact..."
+                value={artefactDescription}
+                onChange={(event) =>
+                  setArtefactDescription(event.target.value)
+                }
+              />
+
+
+              <label>
+                File
+              </label>
+
+              <input
+                type="file"
+                onChange={handleArtefactFile}
+              />
+
+
+              <label>
+                File Path / Reference
+              </label>
+
+              <input
+                type="text"
+                placeholder="Example: /docs/api-specification.pdf"
+                value={artefactFilePath}
+                onChange={(event) =>
+                  setArtefactFilePath(event.target.value)
+                }
+              />
+
+
+              <label>
+                File Size
+              </label>
+
+              <input
+                type="text"
+                placeholder="Example: 245 KB"
+                value={artefactFileSize}
+                onChange={(event) =>
+                  setArtefactFileSize(event.target.value)
+                }
+              />
+
+
+              <label>
+                Uploaded By
+              </label>
+
+              <input
+                type="text"
+                value={artefactUploadedBy}
+                onChange={(event) =>
+                  setArtefactUploadedBy(event.target.value)
+                }
+              />
+
+
+              <label>
+                Related Requirement
+              </label>
+
+              <select
+                value={artefactRequirementId}
+                onChange={(event) =>
+                  setArtefactRequirementId(event.target.value)
+                }
+              >
+                <option value="">
+                  No Requirement Reference
+                </option>
+
+                {requirements.map((requirement) => (
+                  <option
+                    key={requirement.id}
+                    value={requirement.id}
+                  >
+                    REQ-
+                    {String(requirement.id).padStart(3, "0")}
+                    {" — "}
+                    {requirement.title}
+                  </option>
+                ))}
+              </select>
+
+
+              <label>
+                Status
+              </label>
+
+              <select
+                value={artefactStatus}
+                onChange={(event) =>
+                  setArtefactStatus(event.target.value)
+                }
+              >
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="ARCHIVED">ARCHIVED</option>
+              </select>
+
+
+              <div className="form-buttons">
+
+                <button
+                  type="button"
+                  className="cancel-button"
+                  onClick={() => setShowArtefactForm(false)}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="primary-button"
+                  disabled={artefactLoading}
+                >
+                  {artefactLoading
+                    ? "Saving..."
+                    : "Save Artefact"}
+                </button>
+
+              </div>
+
+            </form>
+
+          </div>
+
+        </div>
+
+      )}
+
+
+      {/* =====================================================
+          ARTEFACT DETAILS MODAL
+          ===================================================== */}
+
+      {selectedArtefact && (
+
+        <div className="modal-overlay">
+
+          <div className="details-modal">
+
+            <div className="modal-header">
+
+              <div>
+
+                <div className="requirement-id">
+                  ART-
+                  {String(selectedArtefact.id).padStart(3, "0")}
+                </div>
+
+                <h2>
+                  {selectedArtefact.artefactName}
+                </h2>
+
+                <p>
+                  Project artefact metadata and reference information
+                </p>
+
+              </div>
+
+              <button
+                className="close-button"
+                onClick={closeArtefact}
+              >
+                ×
+              </button>
+
+            </div>
+
+
+            <div className="details-content">
+
+              <div className="details-grid">
+
+                <div className="detail-block">
+                  <h3>Artefact Type</h3>
+                  <p>{selectedArtefact.artefactType}</p>
+                </div>
+
+                <div className="detail-block">
+                  <h3>Status</h3>
+                  <span className="status">
+                    {selectedArtefact.status}
+                  </span>
+                </div>
+
+              </div>
+
+
+              <div className="detail-block">
+                <h3>Description</h3>
+                <p>
+                  {selectedArtefact.description ||
+                    "No artefact description provided."}
+                </p>
+              </div>
+
+
+              <div className="details-grid">
+
+                <div className="detail-block">
+                  <h3>Uploaded By</h3>
+                  <p>{selectedArtefact.uploadedBy || "Unknown"}</p>
+                </div>
+
+                <div className="detail-block">
+                  <h3>File Size</h3>
+                  <p>{selectedArtefact.fileSize || "Not provided"}</p>
+                </div>
+
+              </div>
+
+
+              <div className="detail-block">
+                <h3>File Path / Reference</h3>
+                <p>
+                  {selectedArtefact.filePath ||
+                    "No file path or reference provided."}
+                </p>
+              </div>
+
+
+              <div className="detail-block">
+                <h3>Related Requirement</h3>
+                <p>
+                  {selectedArtefact.requirementId
+                    ? `REQ-${String(selectedArtefact.requirementId).padStart(3, "0")} — ${selectedArtefact.requirementTitle || "Unknown"}`
+                    : "No requirement reference"}
+                </p>
+              </div>
+
+
+              <div className="detail-block">
+                <h3>Created</h3>
+                <p>{formatDate(selectedArtefact.createdAt)}</p>
+              </div>
+
+            </div>
+
+
+            <div className="details-footer">
+              <button
+                className="cancel-button"
+                onClick={closeArtefact}
+              >
+                Close
+              </button>
             </div>
 
           </div>
